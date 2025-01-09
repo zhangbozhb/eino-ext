@@ -25,9 +25,10 @@ import (
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 
+	"github.com/cloudwego/eino/compose"
+
 	"github.com/cloudwego/eino-ext/devops/internal/mock"
 	"github.com/cloudwego/eino-ext/devops/internal/model"
-	"github.com/cloudwego/eino/compose"
 )
 
 type callbackTestSuite struct {
@@ -77,7 +78,7 @@ func (c *callbackTestSuite) Test_NewGlobalDevGraphCompileCallback() {
 	mockey.PatchConvey("add graph with no graph name", c.T(), func() {
 		c.mockContainer.EXPECT().AddGraphInfo(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
 			func(graphName string, graphInfo *compose.GraphInfo, graphOpt model.GraphOption) (graphID string, err error) {
-				assert.Equal(c.T(), "callback_test.buildCallbackGraph:63", graphName)
+				assert.Equal(c.T(), "callback_test.buildCallbackGraph:64", graphName)
 				return "", nil
 			}).Times(1)
 
@@ -87,14 +88,14 @@ func (c *callbackTestSuite) Test_NewGlobalDevGraphCompileCallback() {
 	mockey.PatchConvey("add chain with no chian name", c.T(), func() {
 		c.mockContainer.EXPECT().AddGraphInfo(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
 			func(graphName string, graphInfo *compose.GraphInfo, graphOpt model.GraphOption) (graphID string, err error) {
-				assert.Equal(c.T(), "callback_test.buildCallbackChain:72", graphName)
+				assert.Equal(c.T(), "callback_test.buildCallbackChain:73", graphName)
 				return "", nil
 			}).Times(1)
 
 		c.buildCallbackChain()
 	})
 
-	mockey.PatchConvey("skip einodev compile graph", c.T(), func() {
+	mockey.PatchConvey("skip eino devops compile graph", c.T(), func() {
 		var gi model.GraphInfo
 		c.mockContainer.EXPECT().AddGraphInfo(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
 			func(graphName string, graphInfo *compose.GraphInfo, graphOpt model.GraphOption) (graphID string, err error) {
@@ -103,7 +104,7 @@ func (c *callbackTestSuite) Test_NewGlobalDevGraphCompileCallback() {
 					Option:    graphOpt,
 				}
 
-				assert.Equal(c.T(), "callback_test.buildCallbackGraph:63", graphName)
+				assert.Equal(c.T(), "callback_test.buildCallbackGraph:64", graphName)
 				return "", nil
 			}).Times(1)
 		c.buildCallbackGraph()
