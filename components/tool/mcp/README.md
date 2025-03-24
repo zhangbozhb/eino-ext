@@ -25,15 +25,9 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 	"time"
 
-	"github.com/cloudwego/eino-ext/components/model/openai"
-	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/components/tool"
-	"github.com/cloudwego/eino/compose"
-	"github.com/cloudwego/eino/flow/agent/react"
-	"github.com/cloudwego/eino/schema"
 	"github.com/mark3labs/mcp-go/client"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -48,32 +42,16 @@ func main() {
 
 	mcpTools := getMCPTool(ctx)
 
-	cm := getChatModel(ctx)
-
-	runner, err := react.NewAgent(ctx, &react.AgentConfig{
-		Model:       cm,
-		ToolsConfig: compose.ToolsNodeConfig{Tools: mcpTools},
-	})
-	if err != nil {
-		log.Fatal(err)
+	for i, mcpTool := range mcpTools {
+		fmt.Println(i, ":")
+		info, err := mcpTool.Info(ctx)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println("Name:", info.Name)
+		fmt.Println("Desc:", info.Desc)
+		fmt.Println()
 	}
-
-	result, err := runner.Generate(ctx, []*schema.Message{schema.UserMessage("What is the sum of 1 and 2?")})
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(result.Content)
-}
-
-func getChatModel(ctx context.Context) model.ChatModel {
-	cm, err := openai.NewChatModel(ctx, &openai.ChatModelConfig{
-		APIKey: os.Getenv("OPENAI_API_KEY"),
-		Model:  "gpt-4o",
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-	return cm
 }
 
 func getMCPTool(ctx context.Context) []tool.BaseTool {
