@@ -71,15 +71,19 @@ func NewChatModel(ctx context.Context, config *Config) (*ChatModel, error) {
 		cli = anthropic.NewClient(opts...)
 	} else {
 		var opts []func(*awsConfig.LoadOptions) error
-		opts = append(
-			opts,
-			awsConfig.WithRegion(config.Region),
-			awsConfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(
+		if config.Region != "" {
+			opts = append(opts, awsConfig.WithRegion(config.Region))
+		}
+		if config.SecretAccessKey != "" && config.AccessKey != "" {
+			opts = append(opts, awsConfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(
 				config.AccessKey,
 				config.SecretAccessKey,
 				config.SessionToken,
-			)),
-		)
+			)))
+		} else if config.Profile != "" {
+			opts = append(opts, awsConfig.WithSharedConfigProfile(config.Profile))
+		}
+
 		if config.HTTPClient != nil {
 			opts = append(opts, awsConfig.WithHTTPClient(config.HTTPClient))
 		}
@@ -104,12 +108,12 @@ type Config struct {
 
 	// AccessKey is your Bedrock API Access key
 	// Obtain from: https://docs.aws.amazon.com/bedrock/latest/userguide/getting-started.html
-	// Required for Bedrock
+	// Optional for Bedrock
 	AccessKey string
 
 	// SecretAccessKey is your Bedrock API Secret Access key
 	// Obtain from: https://docs.aws.amazon.com/bedrock/latest/userguide/getting-started.html
-	// Required for Bedrock
+	// Optional for Bedrock
 	SecretAccessKey string
 
 	// SessionToken is your Bedrock API Session Token
@@ -117,9 +121,15 @@ type Config struct {
 	// Optional for Bedrock
 	SessionToken string
 
+	// Profile is your Bedrock API AWS profile
+	// This parameter is ignored if AccessKey and SecretAccessKey are provided
+	// Obtain from: https://docs.aws.amazon.com/bedrock/latest/userguide/getting-started.html
+	// Optional for Bedrock
+	Profile string
+
 	// Region is your Bedrock API region
 	// Obtain from: https://docs.aws.amazon.com/bedrock/latest/userguide/getting-started.html
-	// Required for Bedrock
+	// Optional for Bedrock
 	Region string
 
 	// BaseURL is the custom API endpoint URL
