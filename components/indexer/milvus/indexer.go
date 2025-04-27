@@ -34,6 +34,7 @@ import (
 
 type IndexerConfig struct {
 	// Client is the milvus client to be called
+	// It requires the milvus-sdk-go client of version 2.4.x
 	// Required
 	Client client.Client
 	
@@ -146,7 +147,7 @@ func (i *Indexer) Store(ctx context.Context, docs []*schema.Document, opts ...in
 	}, opts...)
 	io := indexer.GetImplSpecificOptions(&ImplOptions{}, opts...)
 	if io.Partition == "" {
-		io.Partition = i.config.Collection
+		io.Partition = defaultPartition
 	}
 	
 	ctx = callbacks.EnsureRunInfo(ctx, i.GetType(), components.ComponentOfIndexer)
