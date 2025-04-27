@@ -21,7 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"time"
-
+	
 	"github.com/bytedance/sonic"
 	"github.com/cloudwego/eino/callbacks"
 	"github.com/cloudwego/eino/components"
@@ -36,7 +36,7 @@ type IndexerConfig struct {
 	// Client is the milvus client to be called
 	// Required
 	Client client.Client
-
+	
 	// Default Collection config
 	// Collection is the collection name in milvus database
 	// Optional, and the default value is "eino_collection"
@@ -61,16 +61,16 @@ type IndexerConfig struct {
 	// Optional, and the default value is false
 	// Enable to dynamic schema it could affect milvus performance
 	EnableDynamicSchema bool
-
+	
 	// DocumentConverter is the function to convert the schema.Document to the row data
 	// Optional, and the default value is defaultDocumentConverter
 	DocumentConverter func(ctx context.Context, docs []*schema.Document, vectors [][]float64) ([]interface{}, error)
-
+	
 	// Index config to the vector column
 	// MetricType the metric type for vector
 	// Optional and default type is HAMMING
 	MetricType MetricType
-
+	
 	// Embedding vectorization method for values needs to be embedded from schema.Document's content.
 	// Required
 	Embedding embedding.Embedder
@@ -86,7 +86,7 @@ func NewIndexer(ctx context.Context, conf *IndexerConfig) (*Indexer, error) {
 	if err := conf.check(); err != nil {
 		return nil, err
 	}
-
+	
 	// check the collection whether to be created
 	ok, err := conf.Client.HasCollection(ctx, conf.Collection)
 	if err != nil {
@@ -113,7 +113,7 @@ func NewIndexer(ctx context.Context, conf *IndexerConfig) (*Indexer, error) {
 			return nil, fmt.Errorf("[NewIndexer] failed to create collection: %w", errToCreate)
 		}
 	}
-
+	
 	// load collection info
 	collection, err := conf.Client.DescribeCollection(ctx, conf.Collection)
 	if err != nil {
@@ -130,7 +130,7 @@ func NewIndexer(ctx context.Context, conf *IndexerConfig) (*Indexer, error) {
 			return nil, err
 		}
 	}
-
+	
 	// create indexer
 	return &Indexer{
 		config: *conf,
@@ -144,7 +144,11 @@ func (i *Indexer) Store(ctx context.Context, docs []*schema.Document, opts ...in
 		SubIndexes: nil,
 		Embedding:  i.config.Embedding,
 	}, opts...)
-
+	io := indexer.GetImplSpecificOptions(&ImplOptions{}, opts...)
+	if io.Partition == "" {
+		io.Partition = i.config.Collection
+	}
+	
 	ctx = callbacks.EnsureRunInfo(ctx, i.GetType(), components.ComponentOfIndexer)
 	// callback info on start
 	ctx = callbacks.OnStart(ctx, &indexer.CallbackInput{
@@ -155,45 +159,45 @@ func (i *Indexer) Store(ctx context.Context, docs []*schema.Document, opts ...in
 			callbacks.OnError(ctx, err)
 		}
 	}()
-
+	
 	emb := co.Embedding
 	if emb == nil {
 		return nil, fmt.Errorf("[Indexer.Store] embedding not provided")
 	}
-
+	
 	// load documents content
 	texts := make([]string, 0, len(docs))
 	for _, doc := range docs {
 		texts = append(texts, doc.Content)
 	}
-
+	
 	// embedding
 	vectors, err := emb.EmbedStrings(makeEmbeddingCtx(ctx, emb), texts)
 	if err != nil {
 		return nil, err
 	}
-
+	
 	if len(vectors) != len(docs) {
 		return nil, fmt.Errorf("[Indexer.Store] embedding result length not match need: %d, got: %d", len(docs), len(vectors))
 	}
-
+	
 	// load documents content
 	rows, err := i.config.DocumentConverter(ctx, docs, vectors)
 	if err != nil {
 		return nil, fmt.Errorf("[Indexer.Store] failed to convert documents: %w", err)
 	}
-
+	
 	// store documents into milvus
-	results, err := i.config.Client.InsertRows(ctx, i.config.Collection, "", rows)
+	results, err := i.config.Client.InsertRows(ctx, i.config.Collection, io.Partition, rows)
 	if err != nil {
 		return nil, fmt.Errorf("[Indexer.Store] failed to insert rows: %w", err)
 	}
-
+	
 	// flush collection to make sure the data is visible
 	if err := i.config.Client.Flush(ctx, i.config.Collection, false); err != nil {
 		return nil, fmt.Errorf("[Indexer.Store] failed to flush collection: %w", err)
 	}
-
+	
 	// callback info on end
 	ids = make([]string, results.Len())
 	for idx := 0; idx < results.Len(); idx++ {
@@ -202,7 +206,7 @@ func (i *Indexer) Store(ctx context.Context, docs []*schema.Document, opts ...in
 			return nil, fmt.Errorf("[Indexer.Store] failed to get id: %w", err)
 		}
 	}
-
+	
 	callbacks.OnEnd(ctx, &indexer.CallbackOutput{
 		IDs: ids,
 	})
@@ -233,7 +237,7 @@ func (i *IndexerConfig) getDefaultDocumentConvert() func(ctx context.Context, do
 		em := make([]defaultSchema, 0, len(docs))
 		texts := make([]string, 0, len(docs))
 		rows := make([]interface{}, 0, len(docs))
-
+		
 		for _, doc := range docs {
 			metadata, err := sonic.Marshal(doc.MetaData)
 			if err != nil {
@@ -247,7 +251,7 @@ func (i *IndexerConfig) getDefaultDocumentConvert() func(ctx context.Context, do
 			})
 			texts = append(texts, doc.Content)
 		}
-
+		
 		// build embedding documents for storing
 		for idx, vec := range vectors {
 			em[idx].Vector = vector2Bytes(vec)
