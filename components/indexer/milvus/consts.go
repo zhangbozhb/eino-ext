@@ -28,7 +28,6 @@ const (
 	defaultCollectionContentDesc  = "the content of the document"
 	defaultCollectionMetadata     = "metadata"
 	defaultCollectionMetadataDesc = "the metadata of the document"
-	defaultPartition              = "_default"
 	
 	defaultDim = 81920
 	

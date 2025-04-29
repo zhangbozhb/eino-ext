@@ -49,6 +49,11 @@ type IndexerConfig struct {
 	// Optional, and the default value is 1(disable)
 	// If the partition number is larger than 1, it means use partition and must have a partition key in Fields
 	PartitionNum int64
+	// PartitionName is the partition name in milvus database
+	// Optional, and the default value is ""
+	// If PartitionNum is larger than 1, it means use partition and not support manually specifying the partition names
+	// give priority to using WithPartition
+	PartitionName string
 	// Fields is the collection fields
 	// Optional, and the default value is the default fields
 	Fields []*entity.Field
@@ -132,6 +137,22 @@ func NewIndexer(ctx context.Context, conf *IndexerConfig) (*Indexer, error) {
 		}
 	}
 	
+	if conf.PartitionNum == 0 && conf.PartitionName != "" {
+		ok, err = conf.Client.HasPartition(ctx, conf.Collection, conf.PartitionName)
+		if err != nil {
+			return nil, fmt.Errorf("[NewIndexer] failed to check partition: %w", err)
+		}
+		if !ok {
+			err := conf.Client.CreatePartition(ctx, conf.Collection, conf.PartitionName)
+			if err != nil {
+				return nil, fmt.Errorf("[NewIndexer] failed to create partition: %w", err)
+			}
+		}
+		if err = conf.Client.LoadPartitions(ctx, conf.Collection, []string{conf.PartitionName}, false); err != nil {
+			return nil, fmt.Errorf("[NewIndexer] failed to load partition: %w", err)
+		}
+	}
+	
 	// create indexer
 	return &Indexer{
 		config: *conf,
@@ -147,7 +168,7 @@ func (i *Indexer) Store(ctx context.Context, docs []*schema.Document, opts ...in
 	}, opts...)
 	io := indexer.GetImplSpecificOptions(&ImplOptions{}, opts...)
 	if io.Partition == "" {
-		io.Partition = defaultPartition
+		io.Partition = i.config.PartitionName
 	}
 	
 	ctx = callbacks.EnsureRunInfo(ctx, i.GetType(), components.ComponentOfIndexer)
@@ -345,6 +366,9 @@ func (i *IndexerConfig) check() error {
 	}
 	if i.Embedding == nil {
 		return fmt.Errorf("[NewIndexer] embedding not provided")
+	}
+	if i.PartitionNum > 1 && i.PartitionName != "" {
+		return fmt.Errorf("[NewIndexer] not support manually specifying the partition names if partition key mode is used")
 	}
 	if i.Collection == "" {
 		i.Collection = defaultCollection
