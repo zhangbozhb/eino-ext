@@ -217,7 +217,7 @@ func TestNewIndexer(t *testing.T) {
 					PatchConvey("test partition not found", func() {
 						Mock(GetMethod(mockClient, "HasPartition")).Return(false, nil).Build()
 						PatchConvey("test create partition has error", func() {
-							Mock(GetMethod(mockClient, "CreatePartition")).Return(fmt.Errorf("create partition faild")).Build()
+							Mock(GetMethod(mockClient, "CreatePartition")).Return(fmt.Errorf("create partition failed")).Build()
 							i, err := NewIndexer(ctx, &IndexerConfig{
 								Client:        mockClient,
 								PartitionNum:  0,
@@ -230,7 +230,7 @@ func TestNewIndexer(t *testing.T) {
 						PatchConvey("test partition loaded", func() {
 							Mock(GetMethod(mockClient, "CreatePartition")).Return(nil).Build()
 							PatchConvey("test create partition has error", func() {
-								Mock(GetMethod(mockClient, "LoadPartitions")).Return(fmt.Errorf("load partition faild")).Build()
+								Mock(GetMethod(mockClient, "LoadPartitions")).Return(fmt.Errorf("load partition failed")).Build()
 								i, err := NewIndexer(ctx, &IndexerConfig{
 									Client:        mockClient,
 									PartitionNum:  0,
