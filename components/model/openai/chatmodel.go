@@ -115,6 +115,12 @@ type ChatModelConfig struct {
 	// User unique identifier representing end-user
 	// Optional. Helps OpenAI monitor and detect abuse
 	User *string `json:"user,omitempty"`
+
+	// LogProbs specifies whether to return log probabilities of the output tokens.
+	LogProbs bool `json:"log_probs"`
+
+	// TopLogProbs specifies the number of most likely tokens to return at each token position, each with an associated log probability.
+	TopLogProbs int `json:"top_log_probs"`
 }
 
 var _ model.ChatModel = (*ChatModel)(nil)
@@ -151,6 +157,8 @@ func NewChatModel(ctx context.Context, config *ChatModelConfig) (*ChatModel, err
 			FrequencyPenalty: config.FrequencyPenalty,
 			LogitBias:        config.LogitBias,
 			User:             config.User,
+			LogProbs:         config.LogProbs,
+			TopLogProbs:      config.TopLogProbs,
 		}
 	}
 	cli, err := openai.NewClient(ctx, nConf)
